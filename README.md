@@ -1,5 +1,7 @@
 # Clawd estresado
 
+![Clawd teclea en su laptop, se pone nervioso cuando algo falla y acaba dándose cabezazos contra el teclado](assets/clawd.gif)
+
 Un mod para Claude Code que pone a Clawd encima de la caja de texto, tecleando en su laptop mientras Claude trabaja. Si el turno se complica (fallan herramientas, Claude tiene que preguntarte algo, el trabajo se alarga) Clawd se pone nervioso y, si la cosa empeora, se golpea la cabeza contra el teclado. Cuando pasa un rato sin errores, se calma solo.
 
 Al lado de Clawd aparece en todo momento lo que Claude está haciendo: `Pensando…`, `Leyendo app.ts`, `Ejecutando: npm test`, `Escribiendo la respuesta…`, etc.
@@ -50,3 +52,11 @@ claude plugin test .
 ```
 
 Este mod usa la API de hooks de función de Claude Code, que está en acceso anticipado y puede cambiar entre versiones.
+
+## Aviso
+
+Este es un mod hecho por fans. No es un producto oficial de Anthropic ni está afiliado, patrocinado o respaldado por Anthropic. Clawd y Claude son de Anthropic; aquí Clawd aparece redibujado como homenaje.
+
+## Licencia
+
+[MIT](LICENSE). La licencia cubre el código de este mod, no el personaje ni las marcas de Anthropic.
