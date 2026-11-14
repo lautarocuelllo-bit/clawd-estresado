@@ -1,6 +1,6 @@
 {
   "name": "clawd-estresado",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Clawd sobre la caja de texto, que se golpea la cabeza contra su laptop cuando Claude se estresa.",
   "author": { "name": "Lautaro Cuello" },
   "license": "MIT",

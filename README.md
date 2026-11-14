@@ -1,6 +1,6 @@
 # Clawd estresado
 
-![Clawd teclea en su laptop, se pone nervioso cuando algo falla y acaba dándose cabezazos contra el teclado](assets/clawd.gif)
+![Clawd teclea en su laptop, se pone nervioso cuando algo falla, se da cabezazos contra el teclado, festeja cuando pasan las pruebas y se duerme](assets/clawd.gif)
 
 Un mod para Claude Code que pone a Clawd encima de la caja de texto, tecleando en su laptop mientras Claude trabaja. Si el turno se complica (fallan herramientas, Claude tiene que preguntarte algo, el trabajo se alarga) Clawd se pone nervioso y, si la cosa empeora, se golpea la cabeza contra el teclado. Cuando pasa un rato sin errores, se calma solo.
 
@@ -26,7 +26,7 @@ En la app de escritorio, donde `/plugin` no funciona: pulsa **+** junto a la caj
 
 ## Comandos
 
-- `/clawd test`: Clawd recorre todos sus estados durante 15 segundos y se calma.
+- `/clawd test`: Clawd recorre todos sus estados durante 18 segundos y se calma.
 - `/clawd`: oculta o vuelve a mostrar a Clawd.
 
 ## Cuándo se estresa
@@ -41,6 +41,12 @@ Cada fallo de una herramienta, o cada pregunta que Claude te hace, suma 2 puntos
 | 4 o más | Se da cabezazos contra la laptop |
 
 Si un turno termina con un error, Clawd se da cabezazos durante 5 segundos.
+
+## Otras reacciones
+
+- **Festeja** unos segundos, con los brazos arriba y confeti, cuando un comando de pruebas termina bien (`npm test`, `pytest`, `flutter test`, `cargo test`, `vitest`, `jest`…).
+- **Se duerme** tras cinco minutos sin que nadie haga nada, y se despierta cuando empieza un turno nuevo.
+- **Cuenta los cabezazos del día:** cada vez que llega a darse cabezazos suma uno, y el total aparece junto al texto (`2 cabezazos hoy`). La cuenta es común a todas tus sesiones y vuelve a cero cada día.
 
 En la app de escritorio Clawd es un dibujo animado; en la terminal es una versión en texto de una línea.
 

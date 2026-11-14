@@ -108,7 +108,7 @@ test('/clawd test walks every mood and ends calm', async ($, on) => {
 
   const seen: string[] = []
 
-  for (const wait of [0, 3000, 3000, 4000, 3000, 2500]) {
+  for (const wait of [0, 3000, 3000, 4000, 3000, 2800, 3200]) {
     await clock.advance(wait)
     const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
     seen.push(
@@ -123,7 +123,66 @@ test('/clawd test walks every mood and ends calm', async ($, on) => {
     'Demostración: se pone nervioso…',
     'Demostración: ¡cabezazos!',
     'Demostración: se va calmando…',
-    'Demostración: ya casi…',
+    'Demostración: ¡festeja!',
+    'Demostración: se duerme…',
     'Esperando tu mensaje.',
   ])
+})
+
+test('Clawd celebrates passing tests, counts real head-bangs, and falls asleep when idle', async ($, on) => {
+  const clock = mock.clock(on)
+  const store: Record<string, unknown> = {}
+  on('store.get', (_, e) => ({ value: store[e.key] }))
+  on('store.set', (_, e) => {
+    store[e.key] = e.value
+
+    return { value: undefined }
+  })
+  on('command.register', () => ({ value: { command: 'clawd' } }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  on('turn.complete', () => ({ text: '' }))
+  let fails = false
+  on('tool.call', () => (fails ? { deny: 'boom' } : { result: {} }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+
+    return <Text>engine</Text>
+  })
+  const shown = async () => {
+    const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+    const face = (await ui.find({ type: 'Text', text: /💻/ }))?.text ?? ''
+    const caption = (await ui.find({ type: 'Text', text: /^ [^▐ ]/ }))?.text ?? ''
+    await ui.unmount()
+
+    return [face, caption]
+  }
+
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  await $.turn.start({ text: 'hola', turnId: 't1' })
+
+  // A passing test run: happy eyes and the caption says so.
+  await $.tool.call({ tool: 'Bash', command: 'npm test' })
+  const [party, passed] = await shown()
+  expect(party).toMatch(/\^█\^/)
+  expect(passed).toBe(' ¡Pasaron las pruebas!')
+
+  // Two failures: a real head-bang, counted for today and saved.
+  await clock.advance(5000)
+  fails = true
+  await $.tool.call({ tool: 'Bash', command: 'ls' })
+  await $.tool.call({ tool: 'Bash', command: 'ls' })
+  expect((await shown())[1]).toBe(' Falló: Ejecutando: ls · 1 cabezazo hoy')
+  expect((store.bangs as { count: number }).count).toBe(1)
+
+  // The turn ends; five quiet minutes later Clawd is asleep.
+  await $.turn.complete({ turnId: 't1', reason: 'answer', text: '' } as never)
+  await clock.advance(5 * 60_000 + 1000)
+  const [asleep, zzz] = await shown()
+  expect(asleep).toMatch(/-█-/)
+  expect(zzz).toBe(' Zzz… · 1 cabezazo hoy')
+
+  // A new turn wakes it.
+  await $.turn.start({ text: 'otra', turnId: 't2' })
+  expect((await shown())[0]).toMatch(/▐▛███▜▌/)
 })

@@ -15,7 +15,16 @@ const activity = atom(
   'Esperando tu mensaje.',
 )
 
+const bangs = atom({ plugin: 'clawd-estresado', key: 'bangs' } as const, 0)
+
 const TICK_MS = 500
+/** Cuánto festeja cuando pasan las pruebas, y cuánto tarda en dormirse sin hacer nada. */
+const PARTY_MS = 4000
+const SLEEP_MS = 5 * 60_000
+const ASLEEP = 'Zzz…'
+const PASSED = '¡Pasaron las pruebas!'
+/** Los comandos que corren pruebas o comprobaciones: si terminan bien, Clawd festeja. */
+const TESTS = /\b(npm|pnpm|yarn|bun)\s+(run\s+)?test\b|\b(jest|vitest|pytest|mocha|playwright)\b|\b(flutter|cargo|go|dotnet|deno)\s+test\b|\bplugin\s+test\b/i
 const SCARE_MS = 30_000
 /** What `/clawd test` plays, in order: how long, the mood, the caption. */
 const DEMO: ReadonlyArray<readonly [number, Level, string]> = [
@@ -23,7 +32,8 @@ const DEMO: ReadonlyArray<readonly [number, Level, string]> = [
   [3000, 2, 'Demostración: se pone nervioso…'],
   [4000, 3, 'Demostración: ¡cabezazos!'],
   [3000, 2, 'Demostración: se va calmando…'],
-  [2000, 1, 'Demostración: ya casi…'],
+  [2500, 4, 'Demostración: ¡festeja!'],
+  [3000, 5, 'Demostración: se duerme…'],
 ]
 const IDLE = 'Esperando tu mensaje.'
 const THINKING = 'Pensando…'
@@ -88,6 +98,16 @@ function px(x: number, y: number, w: number, h: number, fill: string, inner = ''
 }
 
 function eyes(lv: Level): string {
+  if (lv === 4) {
+    // Ojos contentos: dos arcos hacia arriba.
+    return `<path d="M24 24l4 -6l4 6M40 24l4 -6l4 6" fill="none" stroke="${DARK}" stroke-width="2.5" stroke-linecap="square"/>`
+  }
+
+  if (lv === 5) {
+    // Dormido: los ojos son dos rayas.
+    return px(25, 22, 6, 2, DARK) + px(41, 22, 6, 2, DARK)
+  }
+
   if (lv === 3) {
     const cross = (x: number) =>
       `<path d="M${x - 3} 17l6 8M${x + 3} 17l-6 8" stroke="${DARK}" stroke-width="2.5" stroke-linecap="square"/>`
@@ -111,6 +131,16 @@ function eyes(lv: Level): string {
 }
 
 function bodyMotion(lv: Level): string {
+  if (lv === 4) {
+    // Saltitos: sube rápido y cae.
+    return '<animateTransform attributeName="transform" type="translate" values="0 0;0 -9;0 0" calcMode="spline" keySplines="0 0 0.4 1;0.6 0 1 1" dur="0.55s" repeatCount="indefinite"/>'
+  }
+
+  if (lv === 5) {
+    // Respira despacio, un poco hundido.
+    return `<animateTransform attributeName="transform" type="translate" values="0 2;0 3.5;0 2" calcMode="spline" keySplines="${EASE};${EASE}" dur="3.6s" repeatCount="indefinite"/>`
+  }
+
   if (lv === 3) {
     // Wind up, slam, a small bounce on the deck, then back up slowly.
     return `<animateTransform attributeName="transform" type="rotate" values="0 40 46;-12 40 46;72 40 46;63 40 46;72 40 46;0 40 46" keyTimes="0;0.25;0.42;0.5;0.58;1" calcMode="spline" keySplines="0.3 0 0.4 1;0.7 0 1 0.6;0 0.4 0.4 1;0.6 0 1 0.6;${EASE}" dur="${BANG}" repeatCount="indefinite"/>`
@@ -129,6 +159,11 @@ function arm(x: number, lv: Level, begin: string): string {
       ? `<animateTransform attributeName="transform" type="translate" values="0 0;0 7;0 0" calcMode="spline" keySplines="${EASE};${EASE}" dur="${lv === 2 ? '0.3s' : '0.5s'}" begin="${begin}" repeatCount="indefinite"/>`
       : ''
 
+  if (lv === 4) {
+    // Brazos arriba, agitándose.
+    return px(x, 9, 8, 8, BODY, `<animateTransform attributeName="transform" type="translate" values="0 0;0 -3;0 0" dur="0.28s" begin="${begin}" repeatCount="indefinite"/>`)
+  }
+
   return px(x, 22, 8, 8, BODY, tap)
 }
 
@@ -142,6 +177,31 @@ function impact(): string {
     key(78, 3) +
     key(96, 6)
   )
+}
+
+function confetti(): string {
+  const bits: ReadonlyArray<readonly [number, string, number, number]> = [
+    [6, '#f5b700', 1.1, 0],
+    [18, '#5aa9e6', 1.4, 0.3],
+    [34, '#7bd389', 1.0, 0.6],
+    [50, '#f472b6', 1.3, 0.15],
+    [62, '#f5b700', 1.2, 0.45],
+    [72, '#5aa9e6', 1.5, 0.75],
+  ]
+
+  return bits
+    .map(
+      ([x, color, seconds, begin]) =>
+        `<rect x="${x}" y="-4" width="3" height="3" fill="${color}"><animateTransform attributeName="transform" type="translate" values="0 0;4 62" dur="${seconds}s" begin="${begin}s" repeatCount="indefinite"/></rect>`,
+    )
+    .join('')
+}
+
+function snore(): string {
+  const z = (x: number, y: number, size: number, begin: number) =>
+    `<text x="${x}" y="${y}" font-size="${size}" font-family="sans-serif" font-weight="bold" fill="#9ca3af" opacity="0">z<animate attributeName="opacity" values="0;1;0" dur="2.4s" begin="${begin}s" repeatCount="indefinite"/></text>`
+
+  return z(60, 24, 8, 0) + z(66, 16, 10, 0.8) + z(73, 8, 12, 1.6)
 }
 
 /** Clawd in blocks: a boxy body, slit eyes, two stub arms, four legs. */
@@ -158,7 +218,7 @@ function clawd(lv: Level): string {
     px(60, 46, 46, 6, '#6b7280') +
     keys +
     `<path d="M100 47L110 13L115 14.5L105 48.5Z" fill="#4b5563"/>` +
-    `<path d="M102.5 43L110.8 16.5" stroke="#93c5fd" stroke-width="1.6"/>`
+    `<path d="M102.5 43L110.8 16.5" stroke="${lv === 5 ? '#55657a' : '#93c5fd'}" stroke-width="1.6"/>`
   const legs = [20, 28, 40, 48].map(x => px(x, 38, 4, 8, BODY)).join('')
 
   return (
@@ -167,6 +227,8 @@ function clawd(lv: Level): string {
     legs +
     `<g>${bodyMotion(lv)}${arm(8, lv, '0s')}${arm(56, lv, lv === 2 ? '0.15s' : '0.25s')}${px(16, 10, 40, 28, BODY)}${eyes(lv)}</g>` +
     (lv === 3 ? impact() : '') +
+    (lv === 4 ? confetti() : '') +
+    (lv === 5 ? snore() : '') +
     '</svg>'
   )
 }
@@ -174,6 +236,14 @@ function clawd(lv: Level): string {
 /** The terminal has no Svg: one line of text, two frames per level. */
 function ascii(lv: Level, f: number): string {
   const isOdd = f % 2 === 1
+
+  if (lv === 5) {
+    return isOdd ? '▐▛-█-▜▌ zZ 💻' : '▐▛-█-▜▌ Zz 💻'
+  }
+
+  if (lv === 4) {
+    return isOdd ? '▐▛^█^▜▌ ✨ 💻' : ' ▐▛^█^▜▌✨ 💻'
+  }
 
   if (lv === 3) {
     return isOdd ? '  ▐▛x█x▜▌💥💻' : '▐▛>█<▜▌   💻'
@@ -198,6 +268,11 @@ const turn = {
   scares: [] as number[],
   isWorking: false,
   forcedUntil: 0,
+  partyUntil: 0,
+  // Cuándo se duerme si nadie hace nada; Infinity mientras Claude trabaja.
+  sleepAt: Infinity,
+  sleeper: undefined as Timer | undefined,
+  bangs: 0,
   demoStart: -1,
   current: 0 as Level,
   running: 0,
@@ -206,9 +281,36 @@ const turn = {
   ticker: undefined as Timer | undefined,
 }
 
+function dayOf(now: number): string {
+  const d = new Date(now)
+
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+}
+
+/** Los cabezazos de hoy, como los guardó esta u otra sesión; otro día empieza de cero. */
+async function loadBangs($: EngineInterface): Promise<void> {
+  const kept = (await $.store.get('bangs').catch(() => undefined)) as { day?: unknown; count?: unknown } | undefined
+  const today = dayOf(await $.clock.now())
+
+  turn.bangs = kept && kept.day === today && typeof kept.count === 'number' ? kept.count : 0
+  await update($, bangs, () => turn.bangs)
+}
+
+async function countBang($: EngineInterface): Promise<void> {
+  await loadBangs($)
+  turn.bangs += 1
+  await update($, bangs, () => turn.bangs)
+  await $.store.set('bangs', { day: dayOf(await $.clock.now()), count: turn.bangs }).catch(() => {})
+}
+
 async function setLevel($: EngineInterface, lv: Level): Promise<void> {
   if (lv === turn.current) {
     return
+  }
+
+  // Un episodio de cabezazos de verdad cuenta; el de la demostración, no.
+  if (lv === 3 && turn.demoStart < 0) {
+    await countBang($).catch(() => {})
   }
 
   turn.current = lv
@@ -248,7 +350,17 @@ async function judge($: EngineInterface): Promise<void> {
     return setLevel($, 3)
   }
 
+  if (now < turn.partyUntil) {
+    return setLevel($, 4)
+  }
+
   if (!turn.isWorking) {
+    if (now >= turn.sleepAt) {
+      await say($, ASLEEP)
+
+      return setLevel($, 5)
+    }
+
     return setLevel($, 0)
   }
 
@@ -274,11 +386,27 @@ function stopTicker(): void {
 async function tick($: EngineInterface): Promise<void> {
   await judge($)
 
-  if (turn.current === 0) {
+  // Tranquilo o dormido no hay nada que animar, salvo en plena demostración.
+  if (turn.demoStart < 0 && (turn.current === 0 || turn.current === 5)) {
     stopTicker()
   } else if (turn.hasTextSurface) {
     await update($, frame, n => (n + 1) % 1000)
   }
+}
+
+function stayAwake(): void {
+  turn.sleeper?.cancel()
+  turn.sleeper = undefined
+  turn.sleepAt = Infinity
+}
+
+/** Tras un rato sin que nadie haga nada, Clawd se duerme. */
+async function dozeLater($: EngineInterface): Promise<void> {
+  stayAwake()
+  turn.sleepAt = (await $.clock.now()) + SLEEP_MS
+  turn.sleeper = $.clock.after(SLEEP_MS + 50, () => {
+    void judge($)
+  })
 }
 
 function startTicker($: EngineInterface): void {
@@ -300,6 +428,8 @@ export const register: Register = on => {
     turn.activity = IDLE
     await update($, level, () => 0)
     await update($, activity, () => IDLE)
+    await loadBangs($).catch(() => {})
+    await dozeLater($).catch(() => {})
 
     return next(e)
   })
@@ -312,7 +442,7 @@ export const register: Register = on => {
       startTicker($)
 
       return {
-        text: 'Clawd recorre todos sus estados durante 15 segundos y se calma.',
+        text: 'Clawd recorre todos sus estados durante 18 segundos y se calma.',
       }
     }
 
@@ -329,6 +459,7 @@ export const register: Register = on => {
       turn.scares = []
       turn.isWorking = true
       turn.running = 0
+      stayAwake()
       await say($, THINKING)
       await judge($)
       startTicker($)
@@ -365,6 +496,14 @@ export const register: Register = on => {
 
     if (turn.running === 0 && turn.isWorking) {
       await say($, hasFailed ? `Falló: ${doing}` : THINKING)
+    }
+
+    // Pasaron las pruebas: festeja un momento.
+    const command = typeof input.command === 'string' ? input.command : ''
+
+    if (!hasFailed && agentId === undefined && (tool === 'Bash' || tool === 'PowerShell') && TESTS.test(command)) {
+      turn.partyUntil = (await $.clock.now()) + PARTY_MS
+      await say($, PASSED)
     }
 
     await judge($)
@@ -407,6 +546,7 @@ export const register: Register = on => {
         turn.forcedUntil = (await $.clock.now()) + 5000
       }
 
+      await dozeLater($).catch(() => {})
       await judge($)
     }
 
@@ -420,6 +560,8 @@ export const register: Register = on => {
 
     const lv = (await read($, level)) as Level
     const doing = await read($, activity)
+    const hits = await read($, bangs)
+    const tally = hits === 0 ? '' : ` · ${hits === 1 ? '1 cabezazo' : `${hits} cabezazos`} hoy`
 
     if (e.surface === 'terminal') {
       turn.hasTextSurface = true
@@ -430,7 +572,7 @@ export const register: Register = on => {
         <Box flexDirection="column">
           <Box>
             <Text color={BODY}>{ascii(lv, f)}</Text>
-            <Text dimColor> {doing}</Text>
+            <Text dimColor> {doing}{tally}</Text>
           </Box>
           {await next(e)}
         </Box>
@@ -450,7 +592,7 @@ export const register: Register = on => {
           isInteractive
         />
         <Text dimColor size="caption">
-          {doing}
+          {doing}{tally}
         </Text>
         </Box>
         {await next(e)}
